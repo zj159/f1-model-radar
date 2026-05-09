@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.DS_Store
+.env
+.env.local
+.idea/
+.venv/
+data/*.sqlite3
+static/uploads/*
+!static/uploads/.gitkeep

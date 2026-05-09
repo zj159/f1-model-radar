@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}投稿线索｜F1 车模情报站{% endblock %}
+
+{% block content %}
+<section class="form-shell narrow">
+  <p class="eyebrow">Source Tip</p>
+  <h1>提交海外车模线索</h1>
+  {% if request.query_params.get("sent") %}
+    <div class="notice">已收到，审核后会整理发布。</div>
+  {% endif %}
+  <form class="editor-form" method="post" action="/submit">
+    <label>
+      <span>来源链接</span>
+      <input name="source_url" type="url" placeholder="https://..." required>
+    </label>
+    <label>
+      <span>备注</span>
+      <textarea name="note" rows="5" placeholder="车型、车手、预售、补货、你看到的重点"></textarea>
+    </label>
+    <label>
+      <span>联系方式</span>
+      <input name="contact" placeholder="小红书号/邮箱，可选">
+    </label>
+    <button class="button primary" type="submit">提交</button>
+  </form>
+</section>
+{% endblock %}

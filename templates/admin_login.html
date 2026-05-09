@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}后台登录｜F1 车模情报站{% endblock %}
+
+{% block content %}
+<section class="form-shell narrow">
+  <p class="eyebrow">Admin</p>
+  <h1>后台登录</h1>
+  {% if admin_configured %}
+    <p class="lead">输入服务器环境变量里的后台 token。登录后会用安全 cookie 保存，不再把 token 放在后台链接里。</p>
+    <form class="editor-form" method="post" action="/admin/login">
+      <label>
+        <span>Admin token</span>
+        <input name="token" type="password" autocomplete="current-password" required>
+      </label>
+      <button class="button primary" type="submit">进入后台</button>
+    </form>
+  {% else %}
+    <div class="empty-state">
+      <h3>还没有配置后台 token</h3>
+      <p>启动服务前设置 F1_RADAR_ADMIN_TOKEN，例如本地可以用 F1_RADAR_ADMIN_TOKEN=pitbox。</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}

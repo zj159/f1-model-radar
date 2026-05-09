@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  {% set meta = meta|default({}) %}
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}F1 车模情报站{% endblock %}</title>
+  <meta name="description" content="{{ meta.description|default('海外 F1 车模新品、预售、补货消息中文整理。') }}">
+  {% if meta.url %}<link rel="canonical" href="{{ meta.url }}">{% endif %}
+  <meta property="og:type" content="{{ meta.type|default('website') }}">
+  <meta property="og:title" content="{{ meta.title|default('F1 车模情报站') }}">
+  <meta property="og:description" content="{{ meta.description|default('海外 F1 车模新品、预售、补货消息中文整理。') }}">
+  {% if meta.url %}<meta property="og:url" content="{{ meta.url }}">{% endif %}
+  {% if meta.image %}<meta property="og:image" content="{{ meta.image }}">{% endif %}
+  <meta name="twitter:card" content="{% if meta.image %}summary_large_image{% else %}summary{% endif %}">
+  <link rel="alternate" type="application/rss+xml" title="F1 车模情报站 RSS" href="/rss.xml">
+  <link rel="stylesheet" href="{{ url_for('static', path='styles.css') }}">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/">
+      <span class="brand-mark">MG</span>
+      <span>
+        <strong>F1 车模情报站</strong>
+        <small>Model Grid Radar</small>
+      </span>
+    </a>
+    <nav class="top-nav" aria-label="主导航">
+      <a href="/">最新情报</a>
+      <a href="/submit">投稿线索</a>
+      <a href="/rss.xml">RSS</a>
+    </nav>
+  </header>
+
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <span>海外 F1 车模消息中文整理</span>
+    <span>来源归原发布方所有</span>
+  </footer>
+  <script src="{{ url_for('static', path='app.js') }}"></script>
+</body>
+</html>

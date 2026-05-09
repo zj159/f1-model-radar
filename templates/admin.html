@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% block title %}后台发布｜F1 车模情报站{% endblock %}
+
+{% block content %}
+<section class="admin-layout">
+  <div class="admin-main">
+    <p class="eyebrow">Admin</p>
+    <div class="admin-heading">
+      <h1>发布车模情报</h1>
+      <form method="post" action="/admin/logout">
+        <button class="button mini" type="submit">退出后台</button>
+      </form>
+    </div>
+
+    <section class="radar-panel">
+      <div>
+        <h2>自动情报雷达</h2>
+        <p>从公开可访问的厂商/店铺页面抓取最新条目，先进入待审核区，确认后再发布到首页。{% if auto_fetch_minutes > 0 %}后台自动抓取间隔：{{ auto_fetch_minutes }} 分钟。{% endif %}</p>
+      </div>
+      <form method="post" action="/admin/fetch-sources">
+        <button class="button secondary" type="submit">抓取最新</button>
+      </form>
+    </section>
+
+    {% if request.query_params.get("fetched") %}
+      <div class="notice">
+        新抓到 {{ request.query_params.get("fetched") }} 条，已见过 {{ request.query_params.get("seen") }} 条，来源错误 {{ request.query_params.get("errors") }} 个。
+      </div>
+    {% endif %}
+    {% if request.query_params.get("busy") %}
+      <div class="notice">
+        抓取任务正在运行，稍等一下再刷新后台查看结果。
+      </div>
+    {% endif %}
+    {% if request.query_params.get("published") %}
+      <div class="notice">
+        已发布 {{ request.query_params.get("published") }} 条：{{ request.query_params.get("source") }}。{% if request.query_params.get("skipped") %}跳过重复 {{ request.query_params.get("skipped") }} 条。{% endif %}
+      </div>
+    {% endif %}
+    {% if request.query_params.get("duplicate") %}
+      <div class="notice">
+        这条情报已经存在，已跳过重复发布。
+      </div>
+    {% endif %}
+
+    <section class="crawl-health">
+      <div class="section-title">
+        <h2>抓取健康</h2>
+        <span class="muted">最近 {{ crawl_runs|length }} 次</span>
+      </div>
+      <div class="health-grid">
+        {% for run in crawl_runs %}
+          <div class="health-card {% if run.errors %}warn{% endif %}">
+            <strong>{{ run.mode }}</strong>
+            <span>{{ run.finished_at }}</span>
+            <span>新增 {{ run.inserted }} · 已见 {{ run.seen }} · 错误 {{ run.errors }}</span>
+          </div>
+        {% else %}
+          <p class="muted">还没有抓取记录。</p>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="review-panel">
+      <div class="section-title">
+        <h2>待审核情报</h2>
+        <span class="muted">{% if selected_source %}{{ selected_source }} · {% endif %}{{ discovered|length }} 条</span>
+      </div>
+
+      <div class="source-stats">
+        <form method="get" action="/admin">
+          <button class="source-chip {% if not selected_source %}active{% endif %}" type="submit">全部来源</button>
+        </form>
+        {% for stat in source_stats %}
+          {% set pending = stat.pending or 0 %}
+          <form method="get" action="/admin">
+            <input type="hidden" name="source" value="{{ stat.source_name }}">
+            <button class="source-chip {% if selected_source == stat.source_name %}active{% endif %}" type="submit">
+              <strong>{{ stat.source_name }} · {{ pending }}</strong>
+              <span>{{ stat.with_images or 0 }}/{{ stat.seen_total }} 有图 · {{ stat.last_seen_at or "未抓取" }}</span>
+            </button>
+          </form>
+          {% if pending %}
+            <form class="publish-source-form" method="post" action="/admin/discovered/publish-source" onsubmit="return confirm('确定发布这个来源的待审核情报吗？');">
+              <input type="hidden" name="source_name" value="{{ stat.source_name }}">
+              <input class="small-number" type="number" name="limit" min="1" max="100" value="{{ [pending, 20]|min }}" aria-label="发布条数">
+              <button class="source-chip publish" type="submit">批量发布</button>
+            </form>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <div class="discovered-list">
+        {% for item in discovered %}
+          <article class="discovered-item">
+            {% if item.image_url %}
+              <img src="{{ item.image_url }}" alt="{{ item.title }}" loading="lazy">
+            {% else %}
+              <div class="tiny-fallback">{{ item.scale or "F1" }}</div>
+            {% endif %}
+            <div>
+              <div class="meta-row">
+                <span class="pill">{{ category_label(item.category) }}</span>
+                <span class="pill soft">{{ status_label(item.release_status) }}</span>
+                <span>{{ item.source_name }}</span>
+              </div>
+              <h3>{{ item.title }}</h3>
+              <p>{{ item.summary }}</p>
+              <div class="tag-row">
+                {% if item.model_brand %}<span>{{ item.model_brand }}</span>{% endif %}
+                {% if item.team %}<span>{{ item.team }}</span>{% endif %}
+                {% if item.driver %}<span>{{ item.driver }}</span>{% endif %}
+                {% if item.scale %}<span>{{ item.scale }}</span>{% endif %}
+              </div>
+              <div class="inline-actions">
+                <form method="post" action="/admin/discovered/{{ item.id }}/publish">
+                  <button class="button mini" type="submit">发布</button>
+                </form>
+                <form method="post" action="/admin/discovered/{{ item.id }}/ignore">
+                  <button class="button mini" type="submit">忽略</button>
+                </form>
+                {% if item.source_url %}
+                  <a class="button mini" href="{{ item.source_url }}" target="_blank" rel="noreferrer">来源</a>
+                {% endif %}
+              </div>
+            </div>
+          </article>
+        {% else %}
+          <div class="empty-state">
+            <h3>还没有待审核情报</h3>
+            <p>点“抓取最新”后，新的公开来源条目会出现在这里。</p>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <h2>手动发布</h2>
+    <form class="editor-form" method="post" action="/admin/posts" enctype="multipart/form-data">
+      <label>
+        <span>中文标题</span>
+        <input name="title_cn" placeholder="例如：GPworld 开启 McLaren 1:43 预售" required>
+      </label>
+      <label>
+        <span>中文摘要</span>
+        <textarea name="summary_cn" rows="5" placeholder="整理发布重点、预售时间、车型亮点、注意事项" required></textarea>
+      </label>
+      <div class="form-grid">
+        <label>
+          <span>来源名称</span>
+          <input name="source_name" placeholder="Stone Model Car / GPworld / Spark" required>
+        </label>
+        <label>
+          <span>来源链接</span>
+          <input name="source_url" type="url" placeholder="https://...">
+        </label>
+      </div>
+      <label>
+        <span>图片链接</span>
+        <input name="image_url" type="url" placeholder="https://...">
+      </label>
+      <label>
+        <span>上传图片</span>
+        <input name="image_file" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+      </label>
+      <div class="form-grid three">
+        <label>
+          <span>类型</span>
+          <select name="category">
+            {% for key, label in categories.items() %}
+              <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>状态</span>
+          <select name="release_status">
+            {% for key, label in statuses.items() %}
+              <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>
+          <span>日期</span>
+          <input name="published_at" type="date" value="{{ today }}">
+        </label>
+      </div>
+      <div class="form-grid">
+        <label>
+          <span>模型品牌</span>
+          <input name="model_brand" placeholder="Spark / Minichamps / Bburago">
+        </label>
+        <label>
+          <span>比例</span>
+          <input name="scale" placeholder="1:18 / 1:43 / 1:64">
+        </label>
+      </div>
+      <div class="form-grid">
+        <label>
+          <span>车队</span>
+          <input name="team" placeholder="Ferrari / McLaren / Red Bull">
+        </label>
+        <label>
+          <span>车手</span>
+          <input name="driver" placeholder="Leclerc / Norris / Verstappen">
+        </label>
+      </div>
+      <label>
+        <span>标签</span>
+        <input name="tags" placeholder="Ferrari, Leclerc, 1:43, Spark">
+      </label>
+      <button class="button primary" type="submit">发布</button>
+    </form>
+  </div>
+
+  <aside class="admin-side">
+    <section>
+      <h2>监控来源</h2>
+      <div class="compact-list">
+        {% for source in sources %}
+          <a href="{{ source.url }}" target="_blank" rel="noreferrer">
+            <strong>{{ source.name }}</strong>
+            <span>{{ source.kind }}</span>
+          </a>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section>
+      <h2>最近发布</h2>
+      <div class="compact-list">
+        {% for post in posts %}
+          <div class="submission">
+            <a href="/posts/{{ post.id }}">
+              <strong>{{ post.title_cn }}</strong>
+              <span>{{ post.published_at }} · {{ post.source_name }}</span>
+            </a>
+            <form method="post" action="/admin/posts/{{ post.id }}/delete">
+              <button class="button mini" type="submit">删除</button>
+            </form>
+          </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section>
+      <h2>投稿线索</h2>
+      <div class="compact-list">
+        {% for item in submissions %}
+          <div class="submission {% if item.reviewed %}reviewed{% endif %}">
+            <a href="{{ item.source_url }}" target="_blank" rel="noreferrer">{{ item.source_url }}</a>
+            {% if item.note %}<p>{{ item.note }}</p>{% endif %}
+            {% if item.contact %}<span>{{ item.contact }}</span>{% endif %}
+            {% if not item.reviewed %}
+              <form method="post" action="/admin/submissions/{{ item.id }}/reviewed">
+                <button class="button mini" type="submit">已处理</button>
+              </form>
+            {% endif %}
+          </div>
+        {% else %}
+          <p class="muted">暂无投稿。</p>
+        {% endfor %}
+      </div>
+    </section>
+  </aside>
+</section>
+{% endblock %}

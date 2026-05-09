@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ post.title_cn }}｜F1 车模情报站{% endblock %}
+
+{% block content %}
+<article class="detail-layout">
+  <div class="detail-media">
+    {% if post.image_url %}
+      <img src="{{ post.image_url }}" alt="{{ post.title_cn }}">
+    {% else %}
+      <div class="detail-fallback">
+        <span>{{ post.scale or "F1" }}</span>
+        <strong>{{ post.team or "Model Grid" }}</strong>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="detail-content">
+    <div class="meta-row">
+      <span class="pill">{{ category_label(post.category) }}</span>
+      <span class="pill soft">{{ status_label(post.release_status) }}</span>
+      <time datetime="{{ post.published_at }}">{{ post.published_at }}</time>
+    </div>
+    <h1>{{ post.title_cn }}</h1>
+    <p class="detail-summary">{{ post.summary_cn }}</p>
+
+    <dl class="facts">
+      <div><dt>来源</dt><dd>{{ post.source_name }}</dd></div>
+      <div><dt>品牌</dt><dd>{{ post.model_brand or "待确认" }}</dd></div>
+      <div><dt>车队</dt><dd>{{ post.team or "待确认" }}</dd></div>
+      <div><dt>车手</dt><dd>{{ post.driver or "待确认" }}</dd></div>
+      <div><dt>比例</dt><dd>{{ post.scale or "待确认" }}</dd></div>
+    </dl>
+
+    <div class="detail-actions">
+      {% if post.source_url %}
+        <a class="button primary" href="{{ post.source_url }}" target="_blank" rel="noreferrer">查看来源</a>
+      {% endif %}
+      <a class="button ghost" href="/">返回首页</a>
+    </div>
+  </div>
+</article>
+
+<section class="copy-panel">
+  <div class="section-title">
+    <h2>小红书文案</h2>
+    <button class="button secondary" data-copy-target="#xhs-copy">复制</button>
+  </div>
+  <div class="xhs-box" id="xhs-copy">{{ post.xhs_title }}
+
+{{ post.xhs_body }}</div>
+</section>
+{% endblock %}

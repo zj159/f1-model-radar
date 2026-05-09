@@ -1,0 +1,94 @@
+[
+  {
+    "name": "Stone Model Car",
+    "kind": "shopify_products",
+    "url": "https://www.stonemodelcar.com/products.json?limit=250",
+    "base_url": "https://www.stonemodelcar.com",
+    "brand_hint": "Stone Model",
+    "enabled": true
+  },
+  {
+    "name": "Bburago Official F1",
+    "kind": "shopify_products",
+    "url": "https://www.bburago.com/en/collections/formula-1/products.json?limit=250",
+    "base_url": "https://www.bburago.com",
+    "brand_hint": "Bburago",
+    "enabled": true
+  },
+  {
+    "name": "Looksmart Official Formula 1",
+    "kind": "generic_links",
+    "url": "https://looksmartmodels.com/product-tag/formula-1/",
+    "brand_hint": "Looksmart",
+    "exclude_terms": [
+      "Ferrari 1:18",
+      "Ferrari 1:43",
+      "Ferrari F1 History",
+      "Ferrari Le Mans History"
+    ],
+    "enabled": true
+  },
+  {
+    "name": "Spark Japan Official News",
+    "kind": "generic_links",
+    "url": "https://sparkmodel.co.jp/",
+    "brand_hint": "Spark",
+    "include_terms": [
+      "Preorder Information",
+      "New Item Information",
+      "再生産品予約注文",
+      "FORMULA 1"
+    ],
+    "exclude_terms": [
+      "Spark Gallery Tokyo"
+    ],
+    "enabled": true
+  },
+  {
+    "name": "Solido Official Formula 1",
+    "kind": "generic_links",
+    "url": "https://www.solido.com/en/theme/formula-1/",
+    "brand_hint": "Solido",
+    "enabled": true
+  },
+  {
+    "name": "BBR Models Official",
+    "kind": "generic_links",
+    "url": "https://www.bbrmodels.it/",
+    "brand_hint": "BBR",
+    "include_terms": [
+      "F1",
+      "Ferrari SF",
+      "Leclerc",
+      "Hamilton",
+      "Gran Premio",
+      "GP"
+    ],
+    "exclude_terms": [
+      "ABOUT",
+      "CONTATTI",
+      "NEWSLETTER",
+      "BBR BUILT",
+      "BBR Classic"
+    ],
+    "enabled": true
+  },
+  {
+    "name": "GPworld F1 1:43 Spark Modern",
+    "kind": "gpworld_lines",
+    "url": "https://www.gpworld.nl/en/formula-1-143-spark-modern/?switch_lang=en",
+    "enabled": true
+  },
+  {
+    "name": "GPworld F1 1:18",
+    "kind": "gpworld_lines",
+    "url": "https://www.gpworld.nl/en/formula-1-118/?switch_lang=en",
+    "enabled": true
+  },
+  {
+    "name": "GPworld F1 1:43",
+    "kind": "gpworld_lines",
+    "url": "https://www.gpworld.nl/en/formula-1-143/?switch_lang=en",
+    "enabled": true
+  }
+]

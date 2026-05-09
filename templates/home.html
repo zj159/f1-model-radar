@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}最新情报｜F1 车模情报站{% endblock %}
+
+{% block content %}
+<section class="top-band">
+  <div class="top-copy">
+    <p class="eyebrow">海外新品 / 预售 / 补货</p>
+    <h1>不用到处翻，F1 车模消息集中看。</h1>
+    <p class="lead">整理 Stone Model Car、GPworld、品牌官方和海外店铺动态，先用半自动方式保证内容准确。</p>
+  </div>
+  <div class="stats-strip" aria-label="站点统计">
+    <div><strong>{{ stats.posts }}</strong><span>条情报</span></div>
+    <div><strong>{{ stats.today }}</strong><span>今日新增</span></div>
+    <div><strong>{{ stats.week }}</strong><span>近 7 天</span></div>
+    <div><strong>{{ stats.sources }}</strong><span>个来源</span></div>
+    <div><strong>{{ stats.teams }}</strong><span>支车队</span></div>
+  </div>
+</section>
+
+<section class="filter-band">
+  <form class="filters" method="get" action="/">
+    <label class="wide-filter">
+      <span>搜索</span>
+      <input type="search" name="q" value="{{ query.q }}" placeholder="Stone、GPworld、车手、车队、品牌、关键词">
+    </label>
+    <label>
+      <span>来源</span>
+      <select name="source_name">
+        <option value="">全部</option>
+        {% for value in filters.sources %}
+          <option value="{{ value }}" {% if query.source_name == value %}selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>类型</span>
+      <select name="category">
+        <option value="">全部</option>
+        {% for key, label in filters.categories.items() %}
+          <option value="{{ key }}" {% if query.category == key %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>车队</span>
+      <select name="team">
+        <option value="">全部</option>
+        {% for value in filters.teams %}
+          <option value="{{ value }}" {% if query.team == value %}selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>车手</span>
+      <select name="driver">
+        <option value="">全部</option>
+        {% for value in filters.drivers %}
+          <option value="{{ value }}" {% if query.driver == value %}selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>品牌</span>
+      <select name="model_brand">
+        <option value="">全部</option>
+        {% for value in filters.brands %}
+          <option value="{{ value }}" {% if query.model_brand == value %}selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>比例</span>
+      <select name="scale">
+        <option value="">全部</option>
+        {% for value in filters.scales %}
+          <option value="{{ value }}" {% if query.scale == value %}selected{% endif %}>{{ value }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>
+      <span>开始日期</span>
+      <input type="date" name="date_from" value="{{ query.date_from }}">
+    </label>
+    <label>
+      <span>结束日期</span>
+      <input type="date" name="date_to" value="{{ query.date_to }}">
+    </label>
+    <label>
+      <span>排序</span>
+      <select name="sort">
+        <option value="newest" {% if query.sort != "oldest" %}selected{% endif %}>最新在前</option>
+        <option value="oldest" {% if query.sort == "oldest" %}selected{% endif %}>最早在前</option>
+      </select>
+    </label>
+    <div class="filter-actions">
+      <button class="button primary" type="submit">筛选</button>
+      <a class="button ghost" href="/">重置</a>
+    </div>
+  </form>
+</section>
+
+<section class="feed">
+  <div class="section-title">
+    <div>
+      <h2>最新情报 · {{ pagination.total }} 条</h2>
+      <p class="muted">当前显示 {{ pagination.start }}-{{ pagination.end }} 条，日期为本站发现时间。</p>
+    </div>
+    <a href="/submit">提交线索</a>
+  </div>
+
+  {% if grouped_posts %}
+    {% for group in grouped_posts %}
+      <section class="date-group">
+        <div class="date-heading">
+          <h3>{{ group.date }}</h3>
+          <span>{{ group.posts|length }} 条</span>
+        </div>
+        <div class="post-grid">
+          {% for post in group.posts %}
+            <article class="post-card">
+              <a class="media" href="/posts/{{ post.id }}" aria-label="{{ post.title_cn }}">
+                {% if post.image_url %}
+                  <img src="{{ post.image_url }}" alt="{{ post.title_cn }}" loading="lazy">
+                {% else %}
+                  <div class="media-fallback">
+                    <span>{{ post.scale or "F1" }}</span>
+                    <strong>{{ post.team or "Model" }}</strong>
+                  </div>
+                {% endif %}
+              </a>
+              <div class="post-content">
+                <div class="meta-row">
+                  <span class="pill">{{ category_label(post.category) }}</span>
+                  <span class="pill soft">{{ status_label(post.release_status) }}</span>
+                  <span>{{ post.source_name }}</span>
+                  {% if post.source_url %}
+                    <a class="source-link" href="{{ post.source_url }}" target="_blank" rel="noreferrer">原始来源</a>
+                  {% endif %}
+                </div>
+                <h3><a href="/posts/{{ post.id }}">{{ post.title_cn }}</a></h3>
+                <p>{{ post.summary_cn }}</p>
+                <div class="tag-row">
+                  {% if post.model_brand %}<span>{{ post.model_brand }}</span>{% endif %}
+                  {% if post.team %}<span>{{ post.team }}</span>{% endif %}
+                  {% if post.driver %}<span>{{ post.driver }}</span>{% endif %}
+                  {% if post.scale %}<span>{{ post.scale }}</span>{% endif %}
+                </div>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+      {% endfor %}
+      {% if pagination.total_pages > 1 %}
+        <nav class="pagination" aria-label="分页">
+          {% if pagination.prev_url %}
+            <a class="button ghost" href="{{ pagination.prev_url }}">上一页</a>
+          {% else %}
+            <span class="button ghost disabled">上一页</span>
+          {% endif %}
+          <span>第 {{ pagination.page }} / {{ pagination.total_pages }} 页</span>
+          {% if pagination.next_url %}
+            <a class="button ghost" href="{{ pagination.next_url }}">下一页</a>
+          {% else %}
+            <span class="button ghost disabled">下一页</span>
+          {% endif %}
+        </nav>
+      {% endif %}
+  {% else %}
+    <div class="empty-state">
+      <h3>没有匹配的情报</h3>
+      <p>换一个关键词或筛选条件试试。</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
