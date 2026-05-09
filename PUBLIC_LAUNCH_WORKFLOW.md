@@ -19,8 +19,9 @@
 - [x] 本地设置长随机 `F1_RADAR_ADMIN_TOKEN`，保存在 `.env`。
 - [ ] 线上部署时在平台环境变量里重新设置 `F1_RADAR_ADMIN_TOKEN`。
 - [ ] HTTPS 部署时设置 `F1_RADAR_COOKIE_SECURE=1`。
-- [ ] 单独建一个 Git 仓库，只放 `f1-model-radar`，不要夹带其他文件。
+- [x] 单独建一个 Git 仓库，只放 `f1-model-radar`，不要夹带其他文件。
 - [ ] 选择域名，建议先用 `modelgridradar.com` 这类中性名字。
+- [x] 准备 Render/Procfile 部署模板。
 - [ ] 部署到 Render、Fly.io、Railway 或 VPS。
 - [ ] 部署后打开 `/admin/login`，手动跑一次“抓取最新”。
 - [ ] 检查 `/rss.xml`、`/sitemap.xml`、详情页分享预览。
