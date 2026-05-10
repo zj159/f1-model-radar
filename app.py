@@ -9,7 +9,7 @@ import uuid
 from datetime import date, datetime, timedelta, timezone
 from email.utils import format_datetime
 from pathlib import Path
-from urllib.parse import urlencode
+from urllib.parse import unquote, urlencode, urlparse
 from xml.sax.saxutils import escape
 
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
@@ -50,6 +50,31 @@ STATUS_LABELS = {
     "normal": "普通",
 }
 
+GENERIC_TITLES = {
+    "preorder information",
+    "pre-order information",
+    "new item information",
+    "【new item information】",
+    "new release",
+    "news",
+    "announcement",
+}
+
+DISPLAY_BRANDS = [
+    "LookSmart",
+    "Looksmart",
+    "Spark",
+    "Minichamps",
+    "Bburago",
+    "BBR",
+    "GP Replicas",
+    "TecnoModel",
+    "Solido",
+    "Werk83",
+    "Amalgam",
+    "Hot Wheels",
+]
+
 app = FastAPI(title="F1 Model Radar")
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
@@ -81,6 +106,7 @@ def migrate_db(db: sqlite3.Connection) -> None:
     ensure_column(db, "posts", "discovered_item_id", "INTEGER")
     db.execute("DELETE FROM posts WHERE source_name = 'Demo Source'")
     backfill_post_source_keys(db)
+    backfill_generic_post_titles(db)
     db.execute(
         """
         CREATE UNIQUE INDEX IF NOT EXISTS idx_posts_source_key
@@ -124,6 +150,52 @@ def backfill_post_source_keys(db: sqlite3.Connection) -> None:
             key = f"{key}-{row['id']}"
         used.add(key)
         db.execute("UPDATE posts SET source_key = ? WHERE id = ?", (key, row["id"]))
+
+
+def backfill_generic_post_titles(db: sqlite3.Connection) -> None:
+    rows = db.execute(
+        """
+        SELECT * FROM posts
+        WHERE lower(trim(title_cn)) IN (
+            'preorder information',
+            'pre-order information',
+            'new item information',
+            '【new item information】',
+            'new release',
+            'news',
+            'announcement'
+        )
+           OR length(trim(title_cn)) <= 4
+        """
+    ).fetchall()
+    for row in rows:
+        data = polished_post_data(row)
+        if data["title_cn"] == row["title_cn"]:
+            continue
+        xhs_title, xhs_body = make_xhs_copy(data)
+        db.execute(
+            """
+            UPDATE posts
+            SET title_cn = ?,
+                summary_cn = ?,
+                model_brand = ?,
+                scale = ?,
+                tags = ?,
+                xhs_title = ?,
+                xhs_body = ?
+            WHERE id = ?
+            """,
+            (
+                data["title_cn"],
+                data["summary_cn"],
+                data["model_brand"],
+                data["scale"],
+                data["tags"],
+                xhs_title,
+                xhs_body,
+                row["id"],
+            ),
+        )
 
 
 def init_db() -> None:
@@ -306,6 +378,145 @@ def make_xhs_copy(data: dict) -> tuple[str, str]:
         ]
     )
     return xhs_title, xhs_body
+
+
+def is_generic_title(title: str | None) -> bool:
+    normalized = re.sub(r"\s+", " ", (title or "").strip()).lower()
+    return normalized in GENERIC_TITLES or len(normalized) <= 4
+
+
+templates.env.globals["is_generic_title"] = is_generic_title
+
+
+def image_filename_text(image_url: str | None) -> str:
+    if not image_url:
+        return ""
+    parsed = urlparse(image_url)
+    stem = Path(unquote(parsed.path)).stem
+    stem = re.sub(r"-\d+x\d+$", "", stem)
+    stem = re.sub(r"[_-]+", " ", stem)
+    stem = re.sub(r"\b(form|image|img|photo|copy)\b", " ", stem, flags=re.IGNORECASE)
+    stem = re.sub(r"\s+", " ", stem).strip()
+    return stem
+
+
+def title_hint_from_image(image_url: str | None) -> dict[str, str]:
+    text = image_filename_text(image_url)
+    if not text:
+        return {"brand": "", "scale": "", "label": ""}
+
+    brand = first_display_brand(text)
+    scale_match = re.search(r"\b1\s*[/\-\s]\s*(12|18|43|64)\b", text, re.IGNORECASE)
+    scale = f"1/{scale_match.group(1)}" if scale_match else ""
+    month_match = re.search(r"\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[\s-]*(20\d{2})\b", text, re.IGNORECASE)
+    month_label = month_match.group(0).replace("-", " ").upper() if month_match else ""
+    label_parts = [part for part in [brand, scale, month_label] if part]
+    return {"brand": brand, "scale": scale, "label": " ".join(label_parts)}
+
+
+def first_display_brand(text: str) -> str:
+    lowered = text.lower()
+    for brand in DISPLAY_BRANDS:
+        if brand.lower().replace(" ", "") in lowered.replace(" ", ""):
+            return "LookSmart" if brand.lower() == "looksmart" else brand
+    return ""
+
+
+def polished_discovered_data(item: sqlite3.Row) -> dict[str, str]:
+    return polish_item_data(
+        title=item["title"],
+        summary=item["summary"],
+        source_name=item["source_name"],
+        source_url=item["source_url"],
+        image_url=item["image_url"],
+        category=item["category"],
+        model_brand=item["model_brand"],
+        team=item["team"],
+        driver=item["driver"],
+        scale=item["scale"],
+        release_status=item["release_status"],
+        published_at=item["published_at"],
+        tags=item["tags"],
+        source_key=item["source_key"],
+    )
+
+
+def polished_post_data(row: sqlite3.Row) -> dict[str, str]:
+    return polish_item_data(
+        title=row["title_cn"],
+        summary=row["summary_cn"],
+        source_name=row["source_name"],
+        source_url=row["source_url"],
+        image_url=row["image_url"],
+        category=row["category"],
+        model_brand=row["model_brand"],
+        team=row["team"],
+        driver=row["driver"],
+        scale=row["scale"],
+        release_status=row["release_status"],
+        published_at=row["published_at"],
+        tags=row["tags"],
+        source_key=row["source_key"],
+    )
+
+
+def polish_item_data(
+    title: str,
+    summary: str,
+    source_name: str,
+    source_url: str,
+    image_url: str,
+    category: str,
+    model_brand: str,
+    team: str,
+    driver: str,
+    scale: str,
+    release_status: str,
+    published_at: str,
+    tags: str,
+    source_key: str,
+) -> dict[str, str]:
+    title = title or ""
+    summary = summary or ""
+    model_brand = model_brand or ""
+    team = team or ""
+    driver = driver or ""
+    scale = scale or ""
+    image_hint = title_hint_from_image(image_url)
+    if image_hint["brand"] and (not model_brand or model_brand == "Spark"):
+        model_brand = image_hint["brand"]
+    if image_hint["scale"] and not scale:
+        scale = image_hint["scale"]
+
+    if is_generic_title(title):
+        category_label_text = CATEGORY_LABELS.get(category, "车模情报")
+        primary_hint = image_hint["label"] or " ".join(part for part in [model_brand, scale, team, driver] if part)
+        title = f"{primary_hint} {category_label_text}".strip() if primary_hint else f"{source_name} {category_label_text}"
+        summary_bits = [
+            f"{source_name} 抓到一条新的{category_label_text}。",
+            "标题来自来源页的通用栏目名，具体车型以原始图片和来源链接为准。",
+        ]
+        if model_brand or scale or team or driver:
+            facts = " / ".join(part for part in [model_brand, scale, team, driver] if part)
+            summary_bits.append(f"已识别信息：{facts}。")
+        summary = "".join(summary_bits)
+
+    return {
+        "title_cn": title,
+        "summary_cn": summary,
+        "source_name": source_name,
+        "source_url": source_url,
+        "image_url": image_url,
+        "category": category,
+        "model_brand": model_brand,
+        "team": team,
+        "driver": driver,
+        "scale": scale,
+        "release_status": release_status,
+        "published_at": published_at,
+        "tags": ",".join(dict.fromkeys(part for part in [tags, model_brand, scale] if part)),
+        "source_key": source_key,
+    }
 
 
 def valid_admin_token(token: str | None) -> bool:
@@ -537,6 +748,27 @@ def home(
             "teams": db.execute("SELECT COUNT(DISTINCT team) FROM posts WHERE team != ''").fetchone()[0],
             "today": db.execute("SELECT COUNT(*) FROM posts WHERE published_at = ?", (today_key,)).fetchone()[0],
             "week": db.execute("SELECT COUNT(*) FROM posts WHERE published_at >= ?", (week_start_key,)).fetchone()[0],
+            "last_updated": db.execute("SELECT MAX(published_at) FROM posts").fetchone()[0] or "",
+            "pending": db.execute("SELECT COUNT(*) FROM discovered_items WHERE status = 'new'").fetchone()[0],
+        }
+        brief = {
+            "highlights": db.execute(
+                """
+                SELECT id, title_cn, source_name, category, model_brand, team, driver, scale
+                FROM posts
+                ORDER BY date(published_at) DESC, id DESC
+                LIMIT 3
+                """
+            ).fetchall(),
+            "source_counts": db.execute(
+                """
+                SELECT source_name, COUNT(*) AS total, MAX(published_at) AS last_seen
+                FROM posts
+                GROUP BY source_name
+                ORDER BY total DESC, last_seen DESC, source_name
+                LIMIT 6
+                """
+            ).fetchall(),
         }
     query = {
         "q": q,
@@ -570,6 +802,7 @@ def home(
             "grouped_posts": group_posts_by_date(posts),
             "filters": filters,
             "stats": stats,
+            "brief": brief,
             "query": query,
             "pagination": pagination,
             "meta": {
@@ -668,6 +901,16 @@ def robots(request: Request) -> Response:
     base_url = public_base_url(request)
     content = f"User-agent: *\nAllow: /\nSitemap: {base_url}/sitemap.xml\n"
     return Response(content, media_type="text/plain; charset=utf-8")
+
+
+@app.get("/healthz")
+def healthz() -> dict[str, int | str]:
+    init_db()
+    with get_db() as db:
+        posts = db.execute("SELECT COUNT(*) FROM posts").fetchone()[0]
+        pending = db.execute("SELECT COUNT(*) FROM discovered_items WHERE status = 'new'").fetchone()[0]
+        last_run = db.execute("SELECT MAX(finished_at) FROM crawl_runs").fetchone()[0] or ""
+    return {"ok": 1, "posts": posts, "pending": pending, "last_crawl": last_run}
 
 
 @app.get("/sitemap.xml")
@@ -992,22 +1235,7 @@ def fetch_sources(request: Request):
 
 
 def discovered_row_to_post_data(item: sqlite3.Row) -> dict[str, str]:
-    return {
-        "title_cn": item["title"],
-        "summary_cn": item["summary"],
-        "source_name": item["source_name"],
-        "source_url": item["source_url"],
-        "image_url": item["image_url"],
-        "category": item["category"],
-        "model_brand": item["model_brand"],
-        "team": item["team"],
-        "driver": item["driver"],
-        "scale": item["scale"],
-        "release_status": item["release_status"],
-        "published_at": item["published_at"],
-        "tags": item["tags"],
-        "source_key": item["source_key"],
-    }
+    return polished_discovered_data(item)
 
 
 def post_exists_for_discovered(db: sqlite3.Connection, item: sqlite3.Row) -> bool:

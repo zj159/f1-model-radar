@@ -17,6 +17,46 @@
   </div>
 </section>
 
+<section class="brief-band" aria-label="今日看点">
+  <div class="brief-card lead-brief">
+    <span class="eyebrow">今日看点</span>
+    {% if brief.highlights %}
+      <div class="brief-list">
+        {% for item in brief.highlights %}
+          <a href="/posts/{{ item.id }}">
+            <strong>{{ item.title_cn }}</strong>
+            <span>{{ category_label(item.category) }} · {{ item.source_name }}{% if item.model_brand %} · {{ item.model_brand }}{% endif %}{% if item.scale %} · {{ item.scale }}{% endif %}</span>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>线上库还没有发布内容。管理员抓取并审核后，这里会自动变成“今天值得看的 3 条”。</p>
+    {% endif %}
+  </div>
+
+  <div class="brief-card">
+    <span class="eyebrow">来源覆盖</span>
+    {% if brief.source_counts %}
+      <div class="source-counts">
+        {% for source in brief.source_counts %}
+          <a href="/?source_name={{ source.source_name|urlencode }}">
+            <strong>{{ source.source_name }}</strong>
+            <span>{{ source.total }} 条{% if source.last_seen %} · {{ source.last_seen }}{% endif %}</span>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p>目标来源包括 Stone Model Car、GPworld、Spark、LookSmart、Bburago 等公开页面。</p>
+    {% endif %}
+  </div>
+
+  <div class="brief-card compact-brief">
+    <span class="eyebrow">站点状态</span>
+    <strong>{% if stats.last_updated %}最近更新 {{ stats.last_updated }}{% else %}等待首批发布{% endif %}</strong>
+    <p>内容先进入后台审核，避免把无关链接直接推到首页。{% if stats.pending %}当前还有 {{ stats.pending }} 条候选待审核。{% endif %}</p>
+  </div>
+</section>
+
 <section class="filter-band">
   <form class="filters" method="get" action="/">
     <label class="wide-filter">

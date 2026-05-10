@@ -172,6 +172,61 @@ h1 {
   font-size: 13px;
 }
 
+.brief-band {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, 0.95fr) minmax(220px, 0.7fr);
+  gap: 14px;
+  padding: 18px clamp(18px, 5vw, 72px);
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.brief-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+}
+
+.brief-card .eyebrow {
+  margin-bottom: 8px;
+}
+
+.brief-card p {
+  margin-bottom: 0;
+  color: var(--muted);
+}
+
+.brief-list,
+.source-counts {
+  display: grid;
+  gap: 8px;
+}
+
+.brief-list a,
+.source-counts a {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  border: 1px solid rgba(222, 216, 204, 0.78);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.brief-list strong,
+.source-counts strong,
+.compact-brief strong {
+  line-height: 1.25;
+}
+
+.brief-list span,
+.source-counts span,
+.compact-brief p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .filter-band {
   padding: 22px clamp(18px, 5vw, 72px);
   border-bottom: 1px solid var(--line);
@@ -757,6 +812,18 @@ textarea:focus {
   color: var(--muted);
 }
 
+.quality-warning {
+  width: fit-content;
+  margin: 0 0 8px;
+  padding: 6px 8px;
+  border: 1px solid rgba(229, 180, 54, 0.42);
+  border-radius: 8px;
+  background: rgba(229, 180, 54, 0.16);
+  color: #6f5200;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .inline-actions {
   display: flex;
   flex-wrap: wrap;
@@ -836,7 +903,8 @@ textarea:focus {
 
   .admin-layout,
   .detail-layout,
-  .top-band {
+  .top-band,
+  .brief-band {
     grid-template-columns: 1fr;
   }
 }
