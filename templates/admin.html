@@ -12,6 +12,12 @@
       </form>
     </div>
 
+    {% if not storage.persistent %}
+      <div class="notice">
+        当前数据存储是临时 SQLite：{{ storage.location }}。Render 免费实例重启或重新部署后可能清空；设置 DATABASE_URL 后会改用 Postgres 持久保存。
+      </div>
+    {% endif %}
+
     <section class="radar-panel">
       <div>
         <h2>自动情报雷达</h2>

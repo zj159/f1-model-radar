@@ -12,5 +12,7 @@ services:
         value: "1"
       - key: F1_RADAR_AUTO_FETCH_INTERVAL_MINUTES
         value: "360"
+      - key: DATABASE_URL
+        sync: false
       - key: F1_RADAR_DB_PATH
         value: /tmp/f1-model-radar.sqlite3

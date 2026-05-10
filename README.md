@@ -32,8 +32,14 @@ F1_RADAR_COOKIE_SECURE=1
 F1_RADAR_AUTO_FETCH_INTERVAL_MINUTES=0 ./scripts/run_local.sh
 ```
 
-如果部署平台支持持久化磁盘，可以用 `F1_RADAR_DB_PATH` 指向持久化路径，例如 `/var/data/radar.sqlite3`。
-Render 免费档不支持持久磁盘，所以 `render.yaml` 默认使用 `/tmp/f1-model-radar.sqlite3` 先跑通公网版本；免费实例重启或重新部署后，后台数据可能会清空。
+线上想长期保留数据，建议配置 Postgres 数据库，并在部署平台设置：
+
+```bash
+DATABASE_URL=postgresql://user:password@host:5432/database?sslmode=require
+```
+
+本地开发不填 `DATABASE_URL` 时，系统仍然使用 SQLite。部署平台如果支持持久化磁盘，也可以用 `F1_RADAR_DB_PATH` 指向持久化路径，例如 `/var/data/radar.sqlite3`。
+Render 免费 Web Service 没有持久磁盘，所以 `render.yaml` 默认的 `/tmp/f1-model-radar.sqlite3` 只能先跑通公网版本；实例重启或重新部署后，后台数据可能会清空。要避免清空，请使用 Neon、Supabase、Render Postgres 等外部 Postgres，并设置 `DATABASE_URL`。
 
 ## 第一阶段用法
 

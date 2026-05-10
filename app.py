@@ -25,6 +25,7 @@ DATA_DIR = BASE_DIR / "data"
 UPLOAD_DIR = BASE_DIR / "static" / "uploads"
 SOURCES_PATH = DATA_DIR / "sources.json"
 DB_PATH = Path(os.getenv("F1_RADAR_DB_PATH", str(DATA_DIR / "radar.sqlite3")))
+DATABASE_URL = os.getenv("DATABASE_URL") or os.getenv("F1_RADAR_DATABASE_URL", "")
 ADMIN_TOKEN = os.getenv("F1_RADAR_ADMIN_TOKEN", "")
 ADMIN_COOKIE = "f1_radar_admin"
 ADMIN_COOKIE_SECURE = os.getenv("F1_RADAR_COOKIE_SECURE", "").lower() in {"1", "true", "yes", "on"}
@@ -82,16 +83,101 @@ templates.env.globals["category_label"] = lambda key: CATEGORY_LABELS.get(key or
 templates.env.globals["status_label"] = lambda key: STATUS_LABELS.get(key or "", key or "普通")
 
 
+class HybridRow(dict):
+    def __init__(self, columns: list[str], values: tuple):
+        super().__init__(zip(columns, values))
+        self._values = values
+
+    def __getitem__(self, key):
+        if isinstance(key, int):
+            return self._values[key]
+        return super().__getitem__(key)
+
+
+class PostgresCursor:
+    def __init__(self, cursor):
+        self.cursor = cursor
+        self.rowcount = cursor.rowcount
+        self.columns = [column.name for column in cursor.description] if cursor.description else []
+
+    def fetchone(self):
+        row = self.cursor.fetchone()
+        if row is None:
+            return None
+        return HybridRow(self.columns, row)
+
+    def fetchall(self):
+        return [HybridRow(self.columns, row) for row in self.cursor.fetchall()]
+
+
+class PostgresConnection:
+    def __init__(self, database_url: str):
+        try:
+            import psycopg
+        except ImportError as exc:
+            raise RuntimeError("DATABASE_URL is set, but psycopg is not installed") from exc
+
+        self.conn = psycopg.connect(database_url)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        if exc_type:
+            self.conn.rollback()
+        else:
+            self.conn.commit()
+        self.conn.close()
+
+    def execute(self, sql: str, params=None) -> PostgresCursor:
+        cursor = self.conn.cursor()
+        cursor.execute(to_postgres_sql(sql), params or ())
+        return PostgresCursor(cursor)
+
+
+def to_postgres_sql(sql: str) -> str:
+    converted = sql
+    converted = converted.replace("INTEGER PRIMARY KEY AUTOINCREMENT", "BIGSERIAL PRIMARY KEY")
+    converted = converted.replace("INSERT OR IGNORE INTO discovered_items", "INSERT INTO discovered_items")
+    converted = converted.replace("date(published_at)", "CAST(published_at AS DATE)")
+    converted = converted.replace("?", "%s")
+    if "INSERT INTO discovered_items" in converted and "ON CONFLICT" not in converted:
+        converted = f"{converted} ON CONFLICT (source_key) DO NOTHING"
+    return converted
+
+
 def get_db() -> sqlite3.Connection:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    if DATABASE_URL:
+        return PostgresConnection(DATABASE_URL)
     DATA_DIR.mkdir(exist_ok=True)
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 
+def storage_status() -> dict[str, str | bool]:
+    if DATABASE_URL:
+        return {"engine": "Postgres", "persistent": True, "location": "DATABASE_URL"}
+    return {
+        "engine": "SQLite",
+        "persistent": not str(DB_PATH).startswith("/tmp/"),
+        "location": str(DB_PATH),
+    }
+
+
 def table_columns(db: sqlite3.Connection, table: str) -> set[str]:
+    if isinstance(db, PostgresConnection):
+        rows = db.execute(
+            """
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = 'public' AND table_name = ?
+            """,
+            (table,),
+        ).fetchall()
+        return {row["column_name"] for row in rows}
     rows = db.execute(f"PRAGMA table_info({table})").fetchall()
     return {row["name"] for row in rows}
 
@@ -910,7 +996,7 @@ def healthz() -> dict[str, int | str]:
         posts = db.execute("SELECT COUNT(*) FROM posts").fetchone()[0]
         pending = db.execute("SELECT COUNT(*) FROM discovered_items WHERE status = 'new'").fetchone()[0]
         last_run = db.execute("SELECT MAX(finished_at) FROM crawl_runs").fetchone()[0] or ""
-    return {"ok": 1, "posts": posts, "pending": pending, "last_crawl": last_run}
+    return {"ok": 1, "posts": posts, "pending": pending, "last_crawl": last_run, "storage": str(storage_status()["engine"])}
 
 
 @app.get("/sitemap.xml")
@@ -1043,6 +1129,7 @@ def admin_page(request: Request, source: str = "") -> HTMLResponse:
             "statuses": STATUS_LABELS,
             "today": date.today().isoformat(),
             "auto_fetch_minutes": AUTO_FETCH_INTERVAL_MINUTES,
+            "storage": storage_status(),
         },
     )
     return response
