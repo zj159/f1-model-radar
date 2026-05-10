@@ -13,8 +13,4 @@ services:
       - key: F1_RADAR_AUTO_FETCH_INTERVAL_MINUTES
         value: "360"
       - key: F1_RADAR_DB_PATH
-        value: /var/data/radar.sqlite3
-    disk:
-      name: f1-model-radar-data
-      mountPath: /var/data
-      sizeGB: 1
+        value: /tmp/f1-model-radar.sqlite3

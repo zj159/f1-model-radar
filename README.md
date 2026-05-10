@@ -33,6 +33,7 @@ F1_RADAR_AUTO_FETCH_INTERVAL_MINUTES=0 ./scripts/run_local.sh
 ```
 
 如果部署平台支持持久化磁盘，可以用 `F1_RADAR_DB_PATH` 指向持久化路径，例如 `/var/data/radar.sqlite3`。
+Render 免费档不支持持久磁盘，所以 `render.yaml` 默认使用 `/tmp/f1-model-radar.sqlite3` 先跑通公网版本；免费实例重启或重新部署后，后台数据可能会清空。
 
 ## 第一阶段用法
 

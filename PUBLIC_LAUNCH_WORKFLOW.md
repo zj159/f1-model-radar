@@ -22,7 +22,7 @@
 - [x] 单独建一个 Git 仓库，只放 `f1-model-radar`，不要夹带其他文件。
 - [ ] 选择域名，建议先用 `modelgridradar.com` 这类中性名字。
 - [x] 准备 Render/Procfile 部署模板。
-- [ ] 部署到 Render、Fly.io、Railway 或 VPS。
+- [ ] 部署到 Render、Fly.io、Railway 或 VPS。（Render 免费档先不挂持久磁盘，跑通后再升级持久化。）
 - [ ] 部署后打开 `/admin/login`，手动跑一次“抓取最新”。
 - [ ] 检查 `/rss.xml`、`/sitemap.xml`、详情页分享预览。
 
