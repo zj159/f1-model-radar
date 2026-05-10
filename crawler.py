@@ -29,6 +29,43 @@ DEFAULT_SOURCES = [
         "enabled": True,
     },
     {
+        "name": "STK Model Car F1",
+        "kind": "shopify_products",
+        "url": "https://www.stkmodelcar.com/collections/formula-1-scales/products.json?limit=250",
+        "base_url": "https://www.stkmodelcar.com",
+        "brand_hint": "STK Model Car",
+        "required_any_terms": ["1:", "1/", "F1", "Formula 1", "Spark", "Minichamps", "BBR"],
+        "enabled": True,
+    },
+    {
+        "name": "DrivenBy F1 Model",
+        "kind": "shopify_products",
+        "url": "https://drivenby.co/collections/f1-model/products.json?limit=250",
+        "base_url": "https://drivenby.co",
+        "brand_hint": "DrivenBy",
+        "required_any_terms": ["1:", "1/", "Model Car", "Miniature", "Spark", "Minichamps", "Bburago"],
+        "enabled": True,
+    },
+    {
+        "name": "Formula World Shop F1 Diecasts",
+        "kind": "shopify_products",
+        "url": "https://www.formulaworldshop.com/collections/f1-diecasts/products.json?limit=250",
+        "base_url": "https://www.formulaworldshop.com",
+        "brand_hint": "Formula World Shop",
+        "required_any_terms": ["1:", "1/", "Model", "Diecast", "Minichamps", "Hot Wheels"],
+        "enabled": True,
+    },
+    {
+        "name": "Racing Model Shop F1 Models",
+        "kind": "shopify_products",
+        "url": "https://racingmodelshop.com/products.json?limit=250",
+        "base_url": "https://racingmodelshop.com",
+        "brand_hint": "Racing Model Shop",
+        "required_any_terms": ["1:", "1/", "Model", "Diecast", "Spark", "Minichamps", "BBR", "GP Replicas"],
+        "exclude_terms": ["T-Shirt", "Shirt", "Polo", "Hoodie", "Cap", "Hat", "Jacket", "Apparel", "Gloves"],
+        "enabled": True,
+    },
+    {
         "name": "Looksmart Official Formula 1",
         "kind": "generic_links",
         "url": "https://looksmartmodels.com/product-tag/formula-1/",
@@ -504,8 +541,16 @@ def looks_relevant(text: str) -> bool:
 
 
 def is_relevant_for_source(text: str, source: dict[str, Any]) -> bool:
+    if is_excluded_for_source(text, source):
+        return False
+    required_terms = [str(term).lower() for term in source.get("required_terms", [])]
+    required_any_terms = [str(term).lower() for term in source.get("required_any_terms", [])]
     include_terms = [str(term).lower() for term in source.get("include_terms", [])]
     lowered = text.lower()
+    if required_terms and not all(term in lowered for term in required_terms):
+        return False
+    if required_any_terms and not any(term in lowered for term in required_any_terms):
+        return False
     if include_terms and any(term in lowered for term in include_terms):
         return True
     return looks_relevant(text)
