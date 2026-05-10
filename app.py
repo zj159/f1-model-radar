@@ -562,8 +562,9 @@ def home(
         "next_url": build_page_url(query, current_page + 1) if current_page < total_pages else "",
     }
     return templates.TemplateResponse(
-        "home.html",
-        {
+        request=request,
+        name="home.html",
+        context={
             "request": request,
             "posts": posts,
             "grouped_posts": group_posts_by_date(posts),
@@ -589,8 +590,9 @@ def post_detail(request: Request, post_id: int) -> HTMLResponse:
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
     return templates.TemplateResponse(
-        "post.html",
-        {
+        request=request,
+        name="post.html",
+        context={
             "request": request,
             "post": post,
             "meta": {
@@ -695,7 +697,7 @@ def sitemap(request: Request) -> Response:
 
 @app.get("/submit", response_class=HTMLResponse)
 def submit_page(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("submit.html", {"request": request})
+    return templates.TemplateResponse(request=request, name="submit.html", context={"request": request})
 
 
 @app.post("/submit")
@@ -716,8 +718,9 @@ def submit_source(
 @app.get("/admin/login", response_class=HTMLResponse)
 def admin_login_page(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
-        "admin_login.html",
-        {"request": request, "admin_configured": bool(ADMIN_TOKEN)},
+        request=request,
+        name="admin_login.html",
+        context={"request": request, "admin_configured": bool(ADMIN_TOKEN)},
     )
 
 
@@ -782,8 +785,9 @@ def admin_page(request: Request, source: str = "") -> HTMLResponse:
             """
         ).fetchall()
     response = templates.TemplateResponse(
-        "admin.html",
-        {
+        request=request,
+        name="admin.html",
+        context={
             "request": request,
             "posts": posts,
             "submissions": submissions,
